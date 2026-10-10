@@ -149,6 +149,7 @@ Both skills only run when you invoke them; Claude doesn't start publishing becau
 ## Development
 
 ```sh
+devbox run test   # shunit2
 devbox run lint   # shellcheck
 ```
 
