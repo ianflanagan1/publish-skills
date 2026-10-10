@@ -11,9 +11,10 @@
 #
 # Needs:
 #   The package's origin remote to be a public GitHub repo (run github-publish.sh first)
-#   Your Packagist API tokens in the macOS keychain, stored under your Packagist username:
-#     security add-generic-password -a <packagist-username> -s packagist-api-token -w       # main
-#     security add-generic-password -a <packagist-username> -s packagist-safe-api-token -w  # safe
+#   Your Packagist API tokens, stored under your Packagist username in the macOS keychain or,
+#   on Linux, the Secret Service keyring (see the publish-skills README):
+#     packagist-api-token       the main token
+#     packagist-safe-api-token  the safe token
 #
 # The main token submits the package. The safe token, which can only trigger updates, is the
 # webhook secret, because GitHub stores it. Neither is ever put on a command line.
@@ -41,18 +42,37 @@ if ! command -v gh >/dev/null || ! command -v jq >/dev/null; then
         "$script_dir/$(basename "$0")" "$dir"
 fi
 
-# Prints the username the keychain item for service $1 is stored under
-keychain_user() {
-    local entry
-    entry=$(security find-generic-password -s "$1" 2>/dev/null) \
-        || die "no '$1' keychain item; see the setup steps in the publish-skills README"
-    sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p' <<<"$entry"
+missing_credential() {
+    die "no '$1' credential; see the setup steps in the publish-skills README"
 }
 
-# Prints the secret of the keychain item for service $1
-keychain_secret() {
-    security find-generic-password -s "$1" -w 2>/dev/null \
-        || die "no '$1' keychain item; see the setup steps in the publish-skills README"
+# Prints the username the credential for service $1 is stored under
+credential_user() {
+    local user
+    case "$(uname -s)" in
+        Darwin)
+            user=$(security find-generic-password -s "$1" 2>/dev/null \
+                | sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p') ;;
+        Linux)
+            command -v secret-tool >/dev/null || die "secret-tool is missing; install libsecret-tools"
+            user=$(secret-tool search --all service "$1" 2>/dev/null \
+                | sed -n 's/^attribute\.username = //p' | head -1) ;;
+        *) die "unsupported OS: $(uname -s)" ;;
+    esac
+    [ -n "$user" ] || missing_credential "$1"
+    echo "$user"
+}
+
+# Prints the secret of the credential for service $1
+credential_secret() {
+    local secret
+    case "$(uname -s)" in
+        Darwin) secret=$(security find-generic-password -s "$1" -w 2>/dev/null) || true ;;
+        Linux) secret=$(secret-tool lookup service "$1" 2>/dev/null) || true ;;
+        *) die "unsupported OS: $(uname -s)" ;;
+    esac
+    [ -n "$secret" ] || missing_credential "$1"
+    echo "$secret"
 }
 
 cd "$dir"
@@ -72,8 +92,8 @@ visibility=$(gh repo view "$repo" --json visibility --jq '.visibility | ascii_do
 if curl -fsS -o /dev/null "https://packagist.org/packages/$package.json" 2>/dev/null; then
     echo "Packagist: $package already exists"
 else
-    user=$(keychain_user "$MAIN_TOKEN_SERVICE")
-    token=$(keychain_secret "$MAIN_TOKEN_SERVICE")
+    user=$(credential_user "$MAIN_TOKEN_SERVICE")
+    token=$(credential_secret "$MAIN_TOKEN_SERVICE")
     jq -n --arg url "https://github.com/$repo" '{repository: {url: $url}}' \
         | curl -sS --fail-with-body -X POST \
             -H 'Content-Type: application/json' \
@@ -88,8 +108,8 @@ fi
 if gh api "repos/$repo/hooks" --jq '.[].config.url' | grep -q 'packagist\.org'; then
     echo "Webhook: Packagist hook already exists"
 else
-    user=$(keychain_user "$SAFE_TOKEN_SERVICE")
-    secret=$(keychain_secret "$SAFE_TOKEN_SERVICE")
+    user=$(credential_user "$SAFE_TOKEN_SERVICE")
+    secret=$(credential_secret "$SAFE_TOKEN_SERVICE")
     HOOK_URL="https://packagist.org/api/github?username=$user" HOOK_SECRET=$secret \
         jq -n '{name: "web", active: true, events: ["push"], config: {url: env.HOOK_URL, content_type: "json", secret: env.HOOK_SECRET}}' \
         | gh api "repos/$repo/hooks" --method POST --input - >/dev/null \
