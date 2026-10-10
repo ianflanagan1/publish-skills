@@ -47,17 +47,19 @@ Create a **classic** token at <https://github.com/settings/tokens> → *Generate
 | `public_repo` | creating public repos and pushing to them |
 | `repo` | instead of `public_repo`, only if you'll publish private repos |
 | `workflow` | pushing `.github/workflows/` files |
-| `admin:repo_hook` | adding the Packagist webhook |
 | `read:org` | nothing in these scripts; `gh auth login` refuses tokens without it. Read-only. |
+| `admin:repo_hook` | adding the Packagist webhook |
 
-Copy the token, then log in from the clipboard, so the token never appears on screen or in your scrollback:
+`gh`'s own help lists `repo`, `read:org` and `gist` as its minimum scopes, but only checks what it needs. If `gh auth login` names another missing scope, add it to the token.
+
+Log in, pasting the token at the hidden `GitHub token:` prompt, so it never appears on screen or in your scrollback:
 
 ```sh
-pbpaste | devbox run -- gh auth login --with-token
-devbox run -- gh auth status   # check the login and its scopes
+read -rsp 'GitHub token: ' token && echo && printf '%s\n' "$token" | devbox run -- gh auth login --with-token; unset token
+devbox run -- gh auth status
 ```
 
-`gh` keeps the token in the macOS keychain, so you log in once per token. Do it again when the token expires or you replace it.
+`gh` stores the token in the system credential store (the macOS keychain, or the Secret Service keyring on a Linux desktop), so you log in once per token. Do it again when the token expires or you replace it.
 
 ### 3. Store the Packagist API tokens
 
