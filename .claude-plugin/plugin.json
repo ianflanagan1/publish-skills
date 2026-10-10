@@ -1,6 +1,6 @@
 {
   "name": "publish-skills",
-  "description": "Publish a project as a GitHub repo, and a Composer package on Packagist, with scripts that are safe to re-run.",
+  "description": "Publish a project as a GitHub repo, and a PHP Composer package on Packagist, with scripts that are safe to re-run.",
   "version": "0.1.0",
   "author": {
     "name": "Ian Flanagan"

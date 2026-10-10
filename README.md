@@ -1,6 +1,6 @@
 # publish-skills
 
-Claude Code skills for publishing a project: `/github-publish` creates a GitHub repo, pushes and waits for CI. `/packagist-publish` submits a Composer package to Packagist and adds the webhook that keeps it updated.
+Claude Code skills for publishing a project: `/github-publish` creates a GitHub repo, pushes and waits for CI. `/packagist-publish` submits a PHP Composer package to Packagist and adds the webhook that keeps it updated.
 
 ## Why
 
@@ -36,6 +36,8 @@ devbox install
 devbox run -- gh config set git_protocol ssh   # push over your existing SSH key
 ```
 
+`git_protocol` is saved in `gh`'s own config (`~/.config/gh/config.yml`), which every `gh` on the machine shares. Skip that line if `devbox run -- gh config get git_protocol` already prints `ssh`.
+
 ### 2. Log gh in with a limited token
 
 Create a **classic** token at <https://github.com/settings/tokens> → *Generate new token (classic)*:
@@ -46,23 +48,32 @@ Create a **classic** token at <https://github.com/settings/tokens> → *Generate
 | `repo` | instead of `public_repo`, only if you'll publish private repos |
 | `workflow` | pushing `.github/workflows/` files |
 | `admin:repo_hook` | adding the Packagist webhook |
+| `read:org` | nothing in these scripts; `gh auth login` refuses tokens without it. Read-only. |
 
-Leave out `delete_repo`, so nothing using this token can delete a repository. Avoid fine-grained tokens here: on those, the permission that creates repositories also deletes them. Give the token an expiry, for example 90 days, and repeat this step when it expires.
+Copy the token, then log in from the clipboard, so the token never appears on screen or in your scrollback:
 
 ```sh
-devbox run -- gh auth login --with-token   # paste the token, then Ctrl-D
-devbox run -- gh auth status
+pbpaste | devbox run -- gh auth login --with-token
+devbox run -- gh auth status   # check the login and its scopes
 ```
 
-### 3. Store a Packagist API token
+`gh` keeps the token in the macOS keychain, so you log in once per token. Do it again when the token expires or you replace it.
 
-1. Sign in at <https://packagist.org> with GitHub. Your first submission claims your vendor name.
-2. Copy the API token from your profile page (*Your API Token*).
-3. Store it in the macOS keychain under your Packagist username. The command prompts for the token, so it never lands in your shell history:
+### 3. Store the Packagist API tokens
 
-   ```sh
-   security add-generic-password -a <packagist-username> -s packagist-api-token -w
-   ```
+Sign in at <https://packagist.org> with GitHub; your first submission claims your vendor name. Your profile page has two tokens, and the script uses each for one job:
+
+| Token | Used for | Why that one |
+|---|---|---|
+| Main | submitting a new package | Only the main token can create packages. It stays in your keychain. |
+| Safe | the webhook secret | The secret is stored on GitHub. The safe token can only trigger package updates, so it does little harm if it leaks. |
+
+Store both in the macOS keychain under your Packagist username. Each command prompts for the token, so it never lands in your shell history:
+
+```sh
+security add-generic-password -a <packagist-username> -s packagist-api-token -w       # main
+security add-generic-password -a <packagist-username> -s packagist-safe-api-token -w  # safe
+```
 
 ### 4. Install the skills
 

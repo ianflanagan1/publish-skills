@@ -1,6 +1,6 @@
 ---
 name: packagist-publish
-description: Submit a Composer package that is already a public GitHub repo to Packagist, and add the GitHub webhook that keeps it updated. Safe to re-run.
+description: Submit a PHP Composer package that is already a public GitHub repo to Packagist, and add the GitHub webhook that keeps it updated. Safe to re-run.
 argument-hint: <dir>
 disable-model-invocation: true
 ---
@@ -24,7 +24,7 @@ The script submits the package and adds the webhook. Each step is skipped when a
 
 ## Report
 
-- Success: the Packagist URL, in one line. Packagist reads the repo a few seconds after submission, so the page may briefly show no versions.
-- Failure: the script's error, unchanged.
+- Success: a line `✅ Published.`, then the Packagist URL, in one line. Packagist reads the repo a few seconds after submission, so the page may briefly show no versions.
+- Failure: a line `❌ Publish failed.`, then the script's error, unchanged, in a fenced `text` code block.
 
-If the keychain item is missing or `gh` isn't logged in, tell the user to follow the setup steps in this skill repo's README. Never ask for a token, read the keychain, or try to log in yourself.
+If the keychain item is missing or `gh` isn't logged in, reply `⚠️ Setup incomplete.` and tell the user to follow the setup steps in this skill repo's README. Never ask for a token, read the keychain, or try to log in yourself.

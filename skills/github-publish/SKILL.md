@@ -15,7 +15,7 @@ Publish a local repository to GitHub with `scripts/github-publish.sh`, next to t
    - `<dir>`: the repository's directory.
    - `<public|private>`: never assume. If the user didn't say, ask.
    - `[repo-name]`: only when it should differ from the directory's name, for example a Composer package `vendor/phpstan-foo` in a directory `foo` gets `phpstan-foo`.
-2. The work tree must be clean and on the branch to publish. If it isn't, report what's uncommitted and stop; don't commit for the user unless they asked.
+2. The work tree must be clean and on the branch to publish. If it isn't, reply `⚠️ Uncommitted changes.` and what's uncommitted, and stop; don't commit for the user unless they asked.
 
 ## Run
 
@@ -27,7 +27,7 @@ The script creates the repo, adds `origin`, pushes the current branch and all ta
 
 ## Report
 
-- Success: the repo URL and the CI result, in one or two lines.
-- Failure: the script's error, unchanged. For a CI failure, also the failing step from its log tail. Fix the cause and re-run the script; it picks up where it stopped.
+- Success: a line `✅ Published.`, then the repo URL and the CI result, in one or two lines.
+- Failure: a line `❌ Publish failed.`, then the script's error, unchanged, in a fenced `text` code block. For a CI failure, also the failing step from its log tail. Fix the cause and re-run the script; it picks up where it stopped.
 
-If `gh` isn't logged in, tell the user to follow the setup steps in this skill repo's README. Never ask for a token or try to log in yourself.
+If `gh` isn't logged in, reply `⚠️ gh isn't logged in.` and tell the user to follow the setup steps in this skill repo's README. Never ask for a token or try to log in yourself.

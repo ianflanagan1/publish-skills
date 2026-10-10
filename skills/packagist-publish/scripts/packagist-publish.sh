@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Submits a Composer package that is already on GitHub to Packagist, and adds the GitHub
+# Submits a PHP Composer package that is already on GitHub to Packagist, and adds the GitHub
 # webhook that keeps Packagist up to date. Each step is skipped when already done, so it is
 # safe to re-run after a failure.
 #
@@ -11,15 +11,20 @@
 #
 # Needs:
 #   The package's origin remote to be a public GitHub repo (run github-publish.sh first)
-#   A Packagist API token in the macOS keychain, stored under your Packagist username:
-#     security add-generic-password -a <packagist-username> -s packagist-api-token -w
+#   Your Packagist API tokens in the macOS keychain, stored under your Packagist username:
+#     security add-generic-password -a <packagist-username> -s packagist-api-token -w       # main
+#     security add-generic-password -a <packagist-username> -s packagist-safe-api-token -w  # safe
 #
-# The token is never put on a command line. Runs itself inside this repo's devbox when gh
-# or jq isn't on the PATH. Exits 0 when published, 1 otherwise.
+# The main token submits the package. The safe token, which can only trigger updates, is the
+# webhook secret, because GitHub stores it. Neither is ever put on a command line.
+#
+# Runs itself inside this repo's devbox when gh or jq isn't on the PATH.
+# Exits 0 when published, 1 otherwise.
 
 set -euo pipefail
 
-KEYCHAIN_SERVICE=packagist-api-token
+MAIN_TOKEN_SERVICE=packagist-api-token
+SAFE_TOKEN_SERVICE=packagist-safe-api-token
 
 die() {
     echo "packagist-publish: $*" >&2
@@ -36,12 +41,18 @@ if ! command -v gh >/dev/null || ! command -v jq >/dev/null; then
         "$script_dir/$(basename "$0")" "$dir"
 fi
 
-packagist_credentials() {
+# Prints the username the keychain item for service $1 is stored under
+keychain_user() {
     local entry
-    entry=$(security find-generic-password -s "$KEYCHAIN_SERVICE" 2>/dev/null) \
-        || die "no '$KEYCHAIN_SERVICE' keychain item; see the header of this script"
-    PACKAGIST_USER=$(sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p' <<<"$entry")
-    PACKAGIST_TOKEN=$(security find-generic-password -s "$KEYCHAIN_SERVICE" -w)
+    entry=$(security find-generic-password -s "$1" 2>/dev/null) \
+        || die "no '$1' keychain item; see the setup steps in the publish-skills README"
+    sed -n 's/^ *"acct"<blob>="\(.*\)"$/\1/p' <<<"$entry"
+}
+
+# Prints the secret of the keychain item for service $1
+keychain_secret() {
+    security find-generic-password -s "$1" -w 2>/dev/null \
+        || die "no '$1' keychain item; see the setup steps in the publish-skills README"
 }
 
 cd "$dir"
@@ -61,11 +72,12 @@ visibility=$(gh repo view "$repo" --json visibility --jq '.visibility | ascii_do
 if curl -fsS -o /dev/null "https://packagist.org/packages/$package.json" 2>/dev/null; then
     echo "Packagist: $package already exists"
 else
-    packagist_credentials
+    user=$(keychain_user "$MAIN_TOKEN_SERVICE")
+    token=$(keychain_secret "$MAIN_TOKEN_SERVICE")
     jq -n --arg url "https://github.com/$repo" '{repository: {url: $url}}' \
         | curl -sS --fail-with-body -X POST \
             -H 'Content-Type: application/json' \
-            -H @<(printf 'Authorization: Bearer %s:%s\n' "$PACKAGIST_USER" "$PACKAGIST_TOKEN") \
+            -H @<(printf 'Authorization: Bearer %s:%s\n' "$user" "$token") \
             --data @- \
             https://packagist.org/api/create-package >/dev/null \
         || die "Packagist refused the submission"
@@ -76,8 +88,9 @@ fi
 if gh api "repos/$repo/hooks" --jq '.[].config.url' | grep -q 'packagist\.org'; then
     echo "Webhook: Packagist hook already exists"
 else
-    [ -n "${PACKAGIST_TOKEN:-}" ] || packagist_credentials
-    HOOK_URL="https://packagist.org/api/github?username=$PACKAGIST_USER" HOOK_SECRET="$PACKAGIST_TOKEN" \
+    user=$(keychain_user "$SAFE_TOKEN_SERVICE")
+    secret=$(keychain_secret "$SAFE_TOKEN_SERVICE")
+    HOOK_URL="https://packagist.org/api/github?username=$user" HOOK_SECRET=$secret \
         jq -n '{name: "web", active: true, events: ["push"], config: {url: env.HOOK_URL, content_type: "json", secret: env.HOOK_SECRET}}' \
         | gh api "repos/$repo/hooks" --method POST --input - >/dev/null \
         || die "could not add the webhook; the gh token needs the admin:repo_hook scope"
