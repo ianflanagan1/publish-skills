@@ -10,7 +10,7 @@ Publishing is the same few steps every time, and they touch accounts outside you
 
 `skills/github-publish/scripts/github-publish.sh <dir> <public|private> [repo-name]`:
 
-1. Creates the repo under the account `gh` is logged in as. An existing repo is never edited; if its visibility differs from the one asked for, the script stops.
+1. Creates the repo under the account `gh` is logged in as, with the description from the project's manifest when it has one: `composer.json`, `package.json`, `Cargo.toml`, `pyproject.toml`, `pom.xml`, `*.csproj` or `*.gemspec`. An existing repo is never edited; if its visibility differs from the one asked for, the script stops.
 2. Adds it as the `origin` remote, or checks that `origin` already points at it.
 3. Pushes the current branch and all tags.
 4. Waits for the CI run on the pushed commit and prints the failing log on failure.
@@ -22,7 +22,7 @@ Publishing is the same few steps every time, and they touch accounts outside you
 
 Each step is skipped when it's already done, so after a failure you fix the cause and run the script again. Both scripts refuse to run on a work tree with uncommitted changes, or one without the remote they need.
 
-`gh` and `jq` come from this repo's [devbox](https://www.jetify.com/devbox). The scripts run themselves inside it when either is missing from the PATH, so they work from any directory without a global install.
+`gh`, `jq` and `yq` come from this repo's [devbox](https://www.jetify.com/devbox). The scripts run themselves inside it when either is missing from the PATH, so they work from any directory without a global install.
 
 ## Setup
 
