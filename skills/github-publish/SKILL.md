@@ -27,7 +27,7 @@ The script creates the repo, adds `origin`, pushes the current branch and all ta
 
 ## Report
 
-- Success: a line `✅ Published.`, then the repo URL on its own line. Add `CI passed.` unless the script printed `CI: no workflows`.
+- Success: a line `✅ Published.`, then the repo URL on its own line, then `CI passed.` if the script printed `CI: passed`. Nothing else: when there's no CI, don't mention CI at all.
 - Failure: a line `❌ Publish failed.`, then the script's error, unchanged, in a fenced `text` code block. For a CI failure, also the failing step from its log tail. Fix the cause and re-run the script; it picks up where it stopped.
 
 If `gh` isn't logged in, reply `⚠️ gh isn't logged in.` and tell the user to follow the setup steps in this skill repo's README. Never ask for a token or try to log in yourself.
