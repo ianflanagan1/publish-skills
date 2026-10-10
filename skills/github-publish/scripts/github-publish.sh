@@ -36,7 +36,7 @@ name=${3:-$(basename "$dir")}
 script_dir=$(cd "$(dirname "$0")" && pwd -P)
 if ! command -v gh >/dev/null || ! command -v jq >/dev/null || ! yq --version 2>/dev/null | grep -q mikefarah; then
     [ -z "${PUBLISH_SKILLS_IN_DEVBOX:-}" ] || die "gh, jq or yq is missing even inside devbox"
-    PUBLISH_SKILLS_IN_DEVBOX=1 exec devbox run --config "$script_dir/../../.." -- \
+    PUBLISH_SKILLS_IN_DEVBOX=1 exec devbox run --quiet --config "$script_dir/../../.." -- \
         "$script_dir/$(basename "$0")" "$dir" "$visibility" "$name"
 fi
 
