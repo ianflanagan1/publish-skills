@@ -3,11 +3,14 @@
   "packages": [
     "gh@latest",
     "jq@latest",
-    "shellcheck@latest"
+    "yq-go@latest",
+    "shellcheck@latest",
+    "shunit2@2.1.8"
   ],
   "shell": {
     "scripts": {
-      "lint": "shellcheck skills/*/scripts/*.sh"
+      "lint": "shellcheck -x skills/*/scripts/*.sh tests/*.sh",
+      "test": "sh tests/run.sh"
     }
   }
 }

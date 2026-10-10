@@ -10,11 +10,11 @@
 #
 # Usage: github-publish.sh <dir> <public|private> [repo-name]
 #
-# repo-name defaults to the directory's name. The repo description comes from composer.json
-# or package.json when there is one. An existing repo is never edited: if its visibility
-# differs from the one asked for, the script stops.
+# repo-name defaults to the directory's name. The repo description comes from the project's
+# package manifest when it has one (see manifest-description.sh for which are read). An existing
+# repo is never edited: if its visibility differs from the one asked for, the script stops.
 #
-# Runs itself inside this repo's devbox when gh or jq isn't on the PATH.
+# Runs itself inside this repo's devbox when gh, jq or mikefarah's yq isn't on the PATH.
 # Exits 0 when published and CI passed (or there is no CI), 1 otherwise.
 
 set -euo pipefail
@@ -34,8 +34,8 @@ esac
 name=${3:-$(basename "$dir")}
 
 script_dir=$(cd "$(dirname "$0")" && pwd -P)
-if ! command -v gh >/dev/null || ! command -v jq >/dev/null; then
-    [ -z "${PUBLISH_SKILLS_IN_DEVBOX:-}" ] || die "gh or jq is missing even inside devbox"
+if ! command -v gh >/dev/null || ! command -v jq >/dev/null || ! yq --version 2>/dev/null | grep -q mikefarah; then
+    [ -z "${PUBLISH_SKILLS_IN_DEVBOX:-}" ] || die "gh, jq or yq is missing even inside devbox"
     PUBLISH_SKILLS_IN_DEVBOX=1 exec devbox run --config "$script_dir/../../.." -- \
         "$script_dir/$(basename "$0")" "$dir" "$visibility" "$name"
 fi
@@ -49,13 +49,7 @@ branch=$(git branch --show-current)
 owner=$(gh api user --jq .login)
 repo="$owner/$name"
 
-description=""
-for manifest in composer.json package.json; do
-    if [ -f "$manifest" ]; then
-        description=$(jq -r '.description // ""' "$manifest")
-        break
-    fi
-done
+description=$("$script_dir/manifest-description.sh" "$dir")
 
 # 1. Repo
 if gh repo view "$repo" >/dev/null 2>&1; then
