@@ -81,7 +81,10 @@ git push -u origin "$branch"
 git push origin --tags
 
 # 4. CI
-if ! compgen -G '.github/workflows/*.y*ml' >/dev/null; then
+shopt -s nullglob
+workflows=(.github/workflows/*.yml .github/workflows/*.yaml)
+shopt -u nullglob
+if [ ${#workflows[@]} -eq 0 ]; then
     echo "CI: no workflows"
 else
     commit=$(git rev-parse HEAD)
