@@ -67,15 +67,27 @@ Sign in at <https://packagist.org> with GitHub; your first submission claims you
 
 | Token | Used for | Why that one |
 |---|---|---|
-| Main | submitting a new package | Only the main token can create packages. It stays in your keychain. |
+| Main | submitting a new package | Only the main token can create packages. It stays in your credential store. |
 | Safe | the webhook secret | The secret is stored on GitHub. The safe token can only trigger package updates, so it does little harm if it leaks. |
 
-Store both in the macOS keychain under your Packagist username. Each command prompts for the token, so it never lands in your shell history:
+Store both in your system's credential store under your Packagist **username**, which can differ from your vendor name: the vendor in `ianflanagan1/phpstan-…` belongs to whichever account first publishes under it. Each command prompts for the token, so it never lands in your shell history.
+
+**macOS** (keychain):
 
 ```sh
 security add-generic-password -a <packagist-username> -s packagist-api-token -w       # main
 security add-generic-password -a <packagist-username> -s packagist-safe-api-token -w  # safe
 ```
+
+**Linux** (Secret Service keyring, as on a desktop session):
+
+```sh
+sudo apt install libsecret-tools   # provides secret-tool, on Debian and Ubuntu
+secret-tool store --label='Packagist main API token' service packagist-api-token username <packagist-username>
+secret-tool store --label='Packagist safe API token' service packagist-safe-api-token username <packagist-username>
+```
+
+A headless Linux server usually has no keyring running, so `secret-tool` can't store anything there.
 
 ### 4. Install the skills
 
