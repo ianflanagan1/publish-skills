@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.18.4/.schema/devbox.schema.json",
+  "packages": [
+    "gh@latest",
+    "jq@latest",
+    "shellcheck@latest"
+  ],
+  "shell": {
+    "scripts": {
+      "lint": "shellcheck skills/*/scripts/*.sh"
+    }
+  }
+}
